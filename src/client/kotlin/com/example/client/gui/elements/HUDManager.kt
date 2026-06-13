@@ -5,6 +5,9 @@ import com.example.client.gui.GuiRenderer
 import net.minecraft.client.MinecraftClient
 import kotlin.concurrent.thread
 
+/**
+ * Управляет HUD элементами (FPS, координаты и т.д.)
+ */
 object HUDManager {
     
     private val elements = mutableListOf<GuiElement>()
@@ -25,17 +28,19 @@ object HUDManager {
     fun rearrange() {
         if (!dirty) return
         
-        // Сортируем по вертикали
-        elements.sortWith(compareBy({ it.bounds.y1 }, { it.bounds.x1 }))
+        // Сортируем по вертикали (по Y, затем по X)
+        elements.sortWith(compareBy({ it.y }, { it.x }))
         
-        // Простое "расталкивание" чтобы не пересекались
+        // Простое "расталкивание" чтобы элементы не пересекались
         for (i in elements.indices) {
             for (j in i + 1 until elements.size) {
                 val a = elements[i]
                 val b = elements[j]
                 
-                if (a.bounds.x2 > b.bounds.x1 && a.bounds.y2 > b.bounds.y1) {
-                    b.y = b.y + (a.bounds.y2 - b.bounds.y1) + 2
+                // Проверяем пересечение
+                if (a.x + a.width > b.x && a.y + a.height > b.y) {
+                    // Сдвигаем элемент b вниз
+                    b.y = a.y + a.height + 2
                     dirty = true
                 }
             }
@@ -44,10 +49,19 @@ object HUDManager {
         dirty = false
     }
     
+    /**
+     * Создаёт счётчик FPS
+     */
     fun createFpsCounter(): TextElement {
-        val fpsText = TextElement("FPS: 0", 5f, 5f, color = 0x00FF00, zIndex = 100)
+        val fpsText = TextElement(
+            text = "FPS: 0",
+            x = 5f,
+            y = 5f,
+            color = 0x00FF00,
+            zIndex = 100
+        )
         
-        thread {
+        thread(name = "FPS-Updater", isDaemon = true) {
             while (true) {
                 try {
                     val fps = MinecraftClient.getInstance().currentFps
@@ -62,10 +76,19 @@ object HUDManager {
         return fpsText
     }
     
+    /**
+     * Создаёт отображение координат игрока
+     */
     fun createCoordinates(): TextElement {
-        val coordsText = TextElement("X: 0 Y: 0 Z: 0", 5f, 25f, color = 0xFFFFFF, zIndex = 100)
+        val coordsText = TextElement(
+            text = "X: 0 Y: 0 Z: 0",
+            x = 5f,
+            y = 25f,
+            color = 0xFFFFFF,
+            zIndex = 100
+        )
         
-        thread {
+        thread(name = "Coords-Updater", isDaemon = true) {
             while (true) {
                 try {
                     val player = MinecraftClient.getInstance().player
@@ -82,10 +105,19 @@ object HUDManager {
         return coordsText
     }
     
+    /**
+     * Создаёт отображение пинга
+     */
     fun createPingDisplay(): TextElement {
-        val pingText = TextElement("Ping: 0ms", 5f, 45f, color = 0xFFFF00, zIndex = 100)
+        val pingText = TextElement(
+            text = "Ping: 0ms",
+            x = 5f,
+            y = 45f,
+            color = 0xFFFF00,
+            zIndex = 100
+        )
         
-        thread {
+        thread(name = "Ping-Updater", isDaemon = true) {
             while (true) {
                 try {
                     val player = MinecraftClient.getInstance().player
@@ -106,10 +138,19 @@ object HUDManager {
         return pingText
     }
     
+    /**
+     * Создаёт отображение использования памяти
+     */
     fun createMemoryUsage(): TextElement {
-        val memoryText = TextElement("Mem: 0%", 5f, 65f, color = 0xFF00FF, zIndex = 100)
+        val memoryText = TextElement(
+            text = "Mem: 0%",
+            x = 5f,
+            y = 65f,
+            color = 0xFF00FF,
+            zIndex = 100
+        )
         
-        thread {
+        thread(name = "Memory-Updater", isDaemon = true) {
             while (true) {
                 try {
                     val runtime = Runtime.getRuntime()
@@ -127,10 +168,19 @@ object HUDManager {
         return memoryText
     }
     
+    /**
+     * Создаёт отображение игрового времени
+     */
     fun createGameTime(): TextElement {
-        val timeText = TextElement("Time: 00:00", 5f, 85f, color = 0x00FFFF, zIndex = 100)
+        val timeText = TextElement(
+            text = "Time: 00:00",
+            x = 5f,
+            y = 85f,
+            color = 0x00FFFF,
+            zIndex = 100
+        )
         
-        thread {
+        thread(name = "Time-Updater", isDaemon = true) {
             while (true) {
                 try {
                     val world = MinecraftClient.getInstance().world
@@ -150,24 +200,33 @@ object HUDManager {
         return timeText
     }
     
+    /**
+     * Создаёт отображение направления взгляда
+     */
     fun createDirectionDisplay(): TextElement {
-        val directionText = TextElement("Dir: N", 5f, 105f, color = 0xFFAA00, zIndex = 100)
+        val directionText = TextElement(
+            text = "Dir: N",
+            x = 5f,
+            y = 105f,
+            color = 0xFFAA00,
+            zIndex = 100
+        )
         
-        thread {
+        thread(name = "Direction-Updater", isDaemon = true) {
             while (true) {
                 try {
                     val player = MinecraftClient.getInstance().player
                     if (player != null) {
                         val yaw = (player.yaw % 360 + 360) % 360
                         val direction = when {
-                            yaw in 337.5..360.0 || yaw in 0.0..22.5 -> "N"
-                            yaw in 22.5..67.5 -> "NE"
-                            yaw in 67.5..112.5 -> "E"
-                            yaw in 112.5..157.5 -> "SE"
-                            yaw in 157.5..202.5 -> "S"
-                            yaw in 202.5..247.5 -> "SW"
-                            yaw in 247.5..292.5 -> "W"
-                            yaw in 292.5..337.5 -> "NW"
+                            yaw >= 337.5 || yaw < 22.5 -> "N"
+                            yaw >= 22.5 && yaw < 67.5 -> "NE"
+                            yaw >= 67.5 && yaw < 112.5 -> "E"
+                            yaw >= 112.5 && yaw < 157.5 -> "SE"
+                            yaw >= 157.5 && yaw < 202.5 -> "S"
+                            yaw >= 202.5 && yaw < 247.5 -> "SW"
+                            yaw >= 247.5 && yaw < 292.5 -> "W"
+                            yaw >= 292.5 && yaw < 337.5 -> "NW"
                             else -> "N"
                         }
                         directionText.text = "Dir: $direction (${yaw.toInt()}°)"
@@ -182,21 +241,28 @@ object HUDManager {
         return directionText
     }
     
+    /**
+     * Создаёт отображение биома
+     */
     fun createBiomeDisplay(): TextElement {
-        val biomeText = TextElement("Biome: ...", 5f, 125f, color = 0x88FF88, zIndex = 100)
+        val biomeText = TextElement(
+            text = "Biome: ...",
+            x = 5f,
+            y = 125f,
+            color = 0x88FF88,
+            zIndex = 100
+        )
         
-        thread {
+        thread(name = "Biome-Updater", isDaemon = true) {
             while (true) {
                 try {
                     val player = MinecraftClient.getInstance().player
                     val world = MinecraftClient.getInstance().world
                     if (player != null && world != null) {
-                        val blockPos = player.blockPos
-                        val biome = world.getBiome(blockPos)
-                        val biomeKey = biome.key.value.path
-                        val biomeName = biomeKey.split("_").joinToString(" ") { 
-                            it.replaceFirstChar { c -> c.uppercaseChar() }
-                        }
+                        val biome = world.getBiome(player.blockPos)
+                        val biomeName = biome.key.value.path
+                            .split("_")
+                            .joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
                         biomeText.text = "Biome: $biomeName"
                     }
                     Thread.sleep(1000)
@@ -209,11 +275,78 @@ object HUDManager {
         return biomeText
     }
     
+    /**
+     * Создаёт фоновый прямоугольник для группы элементов
+     * Полезно для визуального объединения HUD-элементов
+     */
+    fun createBackground(
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        color: Int = 0x80000000.toInt(),
+        zIndex: Int = 99
+    ): RectElement {
+        return RectElement(
+            x = x,
+            y = y,
+            width = width,
+            height = height,
+            color = color,
+            zIndex = zIndex
+        )
+    }
+    
+    /**
+     * Создаёт индикатор в виде круга (например, для здоровья)
+     */
+    fun createCircleIndicator(
+        x: Float,
+        y: Float,
+        radius: Float,
+        color: Int = 0xFF0000,
+        zIndex: Int = 100
+    ): CircleElement {
+        return CircleElement(
+            x = x,
+            y = y,
+            radius = radius,
+            color = color,
+            zIndex = zIndex
+        )
+    }
+    
+    /**
+     * Удаляет все элементы
+     */
     fun clearAll() {
         elements.forEach { GuiRenderer.unregister(it) }
         elements.clear()
         dirty = false
     }
     
+    /**
+     * Возвращает копию списка всех элементов
+     */
     fun getAllElements(): List<GuiElement> = elements.toList()
+    
+    /**
+     * Возвращает элемент по координатам (для кликов)
+     */
+    fun getElementAt(x: Float, y: Float): GuiElement? {
+        return elements.findLast { element ->
+            element.visible && 
+            x >= element.x && 
+            x <= element.x + element.width &&
+            y >= element.y && 
+            y <= element.y + element.height
+        }
+    }
+    
+    /**
+     * Принудительно помечает компоновку как требующую обновления
+     */
+    fun markDirty() {
+        dirty = true
+    }
 }
