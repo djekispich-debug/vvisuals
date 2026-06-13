@@ -4,6 +4,7 @@ import com.example.client.gui.GuiElement
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.render.RenderTickCounter
+import org.joml.Matrix4f
 
 class TextElement(
     var text: String = "",
@@ -27,24 +28,35 @@ class TextElement(
         val textWidth = textRenderer.getWidth(textToDraw)
         val textHeight = textRenderer.fontHeight
         
-        // Сохраняем матрицу для масштабирования
-        val matrices = context.matrices
-        matrices.push()
-        
-        matrices.translate(x, y, 0f)
-        matrices.scale(scale, scale, 1f)
-        
-        // Рисуем текст
-        context.drawText(
-            textRenderer,
-            textToDraw,
-            0,
-            0,
-            color,
-            shadow
-        )
-        
-        matrices.pop()
+        if (scale != 1.0f) {
+            // Если есть масштабирование, используем матрицы
+            val matrices = context.matrices
+            val positionMatrix = matrices.peek().positionMatrix
+            positionMatrix.pushMatrix()
+            positionMatrix.translate(x, y, 0f)
+            positionMatrix.scale(scale, scale, 1f)
+            
+            context.drawText(
+                textRenderer,
+                textToDraw,
+                0,
+                0,
+                color,
+                shadow
+            )
+            
+            positionMatrix.popMatrix()
+        } else {
+            // Без масштабирования - проще и быстрее
+            context.drawText(
+                textRenderer,
+                textToDraw,
+                x.toInt(),
+                y.toInt(),
+                color,
+                shadow
+            )
+        }
         
         // Обновляем размеры элемента для корректной обработки кликов
         this.width = textWidth * scale
