@@ -235,13 +235,17 @@ object HUDManager {
                     val player = MinecraftClient.getInstance().player
                     val world = MinecraftClient.getInstance().world
                     if (player != null && world != null) {
-                        val biomeEntry = world.getBiome(player.blockPos)
-                        // Исправленный доступ к ключу биома
-                        val biomeKey = biomeEntry.key
-                        val biomeId = biomeKey.value.toString()
-                        val biomeName = biomeId.split(":")[1]
-                            .split("_")
-                            .joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+                        val biome = world.getBiome(player.blockPos)
+                        // Исправленный доступ к ключу биома без Optional
+                        val biomeId = biome.key.value.toString()
+                        val biomeName = if (biomeId.contains(":")) {
+                            biomeId.split(":")[1]
+                                .split("_")
+                                .joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+                        } else {
+                            biomeId.split("_")
+                                .joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+                        }
                         biomeText.text = "Biome: $biomeName"
                     }
                     Thread.sleep(1000)
