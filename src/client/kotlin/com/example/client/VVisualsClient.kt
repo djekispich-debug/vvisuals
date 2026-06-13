@@ -13,6 +13,7 @@ class VVisualsClient : ClientModInitializer {
     override fun onInitializeClient() {
         logger.info("VVisuals Client инициализирован! Мод работает!")
         
+        // Используем LAST слот, чтобы рисовать ПОСЛЕ всего
         HudRenderCallback.EVENT.register { context, tickDelta ->
             renderFpsHud(context)
         }
@@ -23,15 +24,21 @@ class VVisualsClient : ClientModInitializer {
         val textRenderer = client.textRenderer ?: return
         
         val fps = client.currentFps
-        val fpsText = "§aFPS: §f$fps"
         
+        // Рисуем с черной подложкой (лучше видно на любом фоне)
+        val fpsText = "$fps FPS"
+        
+        // Черная подложка для читаемости
+        context.fill(2, 2, 80, 18, 0x80000000)
+        
+        // Белый текст
         context.drawText(
             textRenderer,
             fpsText,
             5,
             5,
             0xFFFFFF,
-            true
+            false
         )
     }
 }
