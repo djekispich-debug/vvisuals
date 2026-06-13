@@ -2,6 +2,8 @@ package com.example.client
 
 import com.example.client.gui.GuiRenderer
 import com.example.client.gui.elements.HUDManager
+import com.example.client.gui.elements.RectElement
+import com.example.client.gui.elements.TextElement
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback
 import org.slf4j.LoggerFactory
@@ -30,6 +32,18 @@ class VVisualsClient : ClientModInitializer {
             zIndex = 50
         )
         HUDManager.register(demoPanel)
+        
+        // Добавим круги (если хочешь)
+        val circle = CircleElement(
+            centerX = 150f,
+            centerY = 80f,
+            radius = 25f,
+            fillColor = 0x88FF0000,
+            outlineColor = 0xFFFF0000,
+            outlineWidth = 2f,
+            zIndex = 55
+        )
+        HUDManager.register(circle)
         
         // Регистрируем основной рендерер
         HudRenderCallback.EVENT.register { context, tickCounter ->
