@@ -3,6 +3,7 @@ package com.example.client.gui.elements
 import com.example.client.gui.GuiElement
 import com.example.client.gui.GuiRenderer
 import net.minecraft.client.MinecraftClient
+import net.minecraft.registry.RegistryKeys
 import kotlin.concurrent.thread
 
 /**
@@ -25,24 +26,17 @@ object HUDManager {
         dirty = true
     }
     
-    /**
-     * Перестраивает расположение элементов, чтобы они не пересекались
-     */
     fun rearrange() {
         if (!dirty) return
         
-        // Сортируем по вертикали (сначала по Y, потом по X)
         elements.sortWith(compareBy({ it.y }, { it.x }))
         
-        // Простое "расталкивание" по вертикали
         for (i in elements.indices) {
             for (j in i + 1 until elements.size) {
                 val a = elements[i]
                 val b = elements[j]
                 
-                // Проверяем пересечение через bounds
                 if (a.bounds.x2 > b.bounds.x1 && a.bounds.y2 > b.bounds.y1) {
-                    // Сдвигаем элемент b вниз
                     b.y = a.bounds.y2 + 2
                     dirty = true
                 }
@@ -52,9 +46,6 @@ object HUDManager {
         dirty = false
     }
     
-    /**
-     * Создаёт счётчик FPS
-     */
     fun createFpsCounter(): TextElement {
         val fpsText = TextElement(
             text = "FPS: 0",
@@ -79,9 +70,6 @@ object HUDManager {
         return fpsText
     }
     
-    /**
-     * Создаёт отображение координат игрока
-     */
     fun createCoordinates(): TextElement {
         val coordsText = TextElement(
             text = "X: 0 Y: 0 Z: 0",
@@ -108,9 +96,6 @@ object HUDManager {
         return coordsText
     }
     
-    /**
-     * Создаёт отображение пинга
-     */
     fun createPingDisplay(): TextElement {
         val pingText = TextElement(
             text = "Ping: 0ms",
@@ -141,9 +126,6 @@ object HUDManager {
         return pingText
     }
     
-    /**
-     * Создаёт отображение использования памяти
-     */
     fun createMemoryUsage(): TextElement {
         val memoryText = TextElement(
             text = "Mem: 0%",
@@ -171,9 +153,6 @@ object HUDManager {
         return memoryText
     }
     
-    /**
-     * Создаёт отображение игрового времени
-     */
     fun createGameTime(): TextElement {
         val timeText = TextElement(
             text = "Time: 00:00",
@@ -203,9 +182,6 @@ object HUDManager {
         return timeText
     }
     
-    /**
-     * Создаёт отображение направления взгляда
-     */
     fun createDirectionDisplay(): TextElement {
         val directionText = TextElement(
             text = "Dir: N",
@@ -244,9 +220,6 @@ object HUDManager {
         return directionText
     }
     
-    /**
-     * Создаёт отображение биома
-     */
     fun createBiomeDisplay(): TextElement {
         val biomeText = TextElement(
             text = "Biome: ...",
@@ -262,8 +235,11 @@ object HUDManager {
                     val player = MinecraftClient.getInstance().player
                     val world = MinecraftClient.getInstance().world
                     if (player != null && world != null) {
-                        val biome = world.getBiome(player.blockPos)
-                        val biomeName = biome.key.value.path
+                        val biomeEntry = world.getBiome(player.blockPos)
+                        // Исправленный доступ к ключу биома
+                        val biomeKey = biomeEntry.key
+                        val biomeId = biomeKey.value.toString()
+                        val biomeName = biomeId.split(":")[1]
                             .split("_")
                             .joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
                         biomeText.text = "Biome: $biomeName"
@@ -278,9 +254,6 @@ object HUDManager {
         return biomeText
     }
     
-    /**
-     * Создаёт фоновый прямоугольник для группы элементов
-     */
     fun createBackground(
         x: Float = 0f,
         y: Float = 0f,
@@ -303,9 +276,6 @@ object HUDManager {
         )
     }
     
-    /**
-     * Создаёт круговой индикатор (например, для здоровья)
-     */
     fun createCircleIndicator(
         centerX: Float = 50f,
         centerY: Float = 50f,
@@ -328,9 +298,6 @@ object HUDManager {
         )
     }
     
-    /**
-     * Создаёт мини-карту (заглушка)
-     */
     fun createMiniMap(
         x: Float = 5f,
         y: Float = 150f,
@@ -348,30 +315,18 @@ object HUDManager {
         )
     }
     
-    /**
-     * Удаляет все элементы
-     */
     fun clearAll() {
         elements.forEach { GuiRenderer.unregister(it) }
         elements.clear()
         dirty = false
     }
     
-    /**
-     * Возвращает копию списка всех элементов
-     */
     fun getAllElements(): List<GuiElement> = elements.toList()
     
-    /**
-     * Возвращает элемент по координатам (для кликов)
-     */
     fun getElementAt(mouseX: Double, mouseY: Double): GuiElement? {
         return elements.findLast { it.isMouseOver(mouseX, mouseY) }
     }
     
-    /**
-     * Принудительно помечает компоновку как требующую обновления
-     */
     fun markDirty() {
         dirty = true
     }
