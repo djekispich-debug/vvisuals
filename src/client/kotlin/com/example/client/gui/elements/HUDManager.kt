@@ -25,22 +25,25 @@ object HUDManager {
         dirty = true
     }
     
+    /**
+     * Перестраивает расположение элементов, чтобы они не пересекались
+     */
     fun rearrange() {
         if (!dirty) return
         
-        // Сортируем по вертикали (по Y, затем по X)
+        // Сортируем по вертикали (сначала по Y, потом по X)
         elements.sortWith(compareBy({ it.y }, { it.x }))
         
-        // Простое "расталкивание" чтобы элементы не пересекались
+        // Простое "расталкивание" по вертикали
         for (i in elements.indices) {
             for (j in i + 1 until elements.size) {
                 val a = elements[i]
                 val b = elements[j]
                 
-                // Проверяем пересечение
-                if (a.x + a.width > b.x && a.y + a.height > b.y) {
+                // Проверяем пересечение через bounds
+                if (a.bounds.x2 > b.bounds.x1 && a.bounds.y2 > b.bounds.y1) {
                     // Сдвигаем элемент b вниз
-                    b.y = a.y + a.height + 2
+                    b.y = a.bounds.y2 + 2
                     dirty = true
                 }
             }
@@ -220,13 +223,13 @@ object HUDManager {
                         val yaw = (player.yaw % 360 + 360) % 360
                         val direction = when {
                             yaw >= 337.5 || yaw < 22.5 -> "N"
-                            yaw >= 22.5 && yaw < 67.5 -> "NE"
-                            yaw >= 67.5 && yaw < 112.5 -> "E"
-                            yaw >= 112.5 && yaw < 157.5 -> "SE"
-                            yaw >= 157.5 && yaw < 202.5 -> "S"
-                            yaw >= 202.5 && yaw < 247.5 -> "SW"
-                            yaw >= 247.5 && yaw < 292.5 -> "W"
-                            yaw >= 292.5 && yaw < 337.5 -> "NW"
+                            yaw in 22.5..67.5 -> "NE"
+                            yaw in 67.5..112.5 -> "E"
+                            yaw in 112.5..157.5 -> "SE"
+                            yaw in 157.5..202.5 -> "S"
+                            yaw in 202.5..247.5 -> "SW"
+                            yaw in 247.5..292.5 -> "W"
+                            yaw in 292.5..337.5 -> "NW"
                             else -> "N"
                         }
                         directionText.text = "Dir: $direction (${yaw.toInt()}°)"
@@ -277,14 +280,15 @@ object HUDManager {
     
     /**
      * Создаёт фоновый прямоугольник для группы элементов
-     * Полезно для визуального объединения HUD-элементов
      */
     fun createBackground(
-        x: Float,
-        y: Float,
-        width: Float,
-        height: Float,
-        color: Int = 0x80000000.toInt(),
+        x: Float = 0f,
+        y: Float = 0f,
+        width: Float = 100f,
+        height: Float = 100f,
+        fillColor: Int = 0x80000000.toInt(),
+        outlineColor: Int? = null,
+        roundedRadius: Float = 0f,
         zIndex: Int = 99
     ): RectElement {
         return RectElement(
@@ -292,27 +296,55 @@ object HUDManager {
             y = y,
             width = width,
             height = height,
-            color = color,
+            fillColor = fillColor,
+            outlineColor = outlineColor,
+            roundedRadius = roundedRadius,
             zIndex = zIndex
         )
     }
     
     /**
-     * Создаёт индикатор в виде круга (например, для здоровья)
+     * Создаёт круговой индикатор (например, для здоровья)
      */
     fun createCircleIndicator(
-        x: Float,
-        y: Float,
-        radius: Float,
-        color: Int = 0xFF0000,
+        centerX: Float = 50f,
+        centerY: Float = 50f,
+        radius: Float = 20f,
+        fillColor: Int = 0xFFFF0000.toInt(),
+        outlineColor: Int? = 0xFFFFFFFF.toInt(),
+        startAngle: Float = 0f,
+        sweepAngle: Float = 360f,
         zIndex: Int = 100
     ): CircleElement {
         return CircleElement(
+            centerX = centerX,
+            centerY = centerY,
+            radius = radius,
+            fillColor = fillColor,
+            outlineColor = outlineColor,
+            startAngle = startAngle,
+            sweepAngle = sweepAngle,
+            zIndex = zIndex
+        )
+    }
+    
+    /**
+     * Создаёт мини-карту (заглушка)
+     */
+    fun createMiniMap(
+        x: Float = 5f,
+        y: Float = 150f,
+        size: Float = 100f
+    ): RectElement {
+        return RectElement(
             x = x,
             y = y,
-            radius = radius,
-            color = color,
-            zIndex = zIndex
+            width = size,
+            height = size,
+            fillColor = 0x80000000.toInt(),
+            outlineColor = 0xFFFFFFFF.toInt(),
+            roundedRadius = 4f,
+            zIndex = 100
         )
     }
     
@@ -333,14 +365,8 @@ object HUDManager {
     /**
      * Возвращает элемент по координатам (для кликов)
      */
-    fun getElementAt(x: Float, y: Float): GuiElement? {
-        return elements.findLast { element ->
-            element.visible && 
-            x >= element.x && 
-            x <= element.x + element.width &&
-            y >= element.y && 
-            y <= element.y + element.height
-        }
+    fun getElementAt(mouseX: Double, mouseY: Double): GuiElement? {
+        return elements.findLast { it.isMouseOver(mouseX, mouseY) }
     }
     
     /**
