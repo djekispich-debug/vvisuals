@@ -1,9 +1,9 @@
 package com.example.client
 
+import com.example.client.gui.GuiRenderer
+import com.example.client.gui.elements.HUDManager
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.DrawContext
 import org.slf4j.LoggerFactory
 
 class VVisualsClient : ClientModInitializer {
@@ -11,34 +11,35 @@ class VVisualsClient : ClientModInitializer {
     private val logger = LoggerFactory.getLogger("VVisuals")
     
     override fun onInitializeClient() {
-        logger.info("VVisuals Client инициализирован! Мод работает!")
+        logger.info("VVisuals Client инициализирован!")
         
-        // Используем LAST слот, чтобы рисовать ПОСЛЕ всего
-        HudRenderCallback.EVENT.register { context, tickDelta ->
-            renderFpsHud(context)
-        }
-    }
-    
-    private fun renderFpsHud(context: DrawContext) {
-        val client = MinecraftClient.getInstance()
-        val textRenderer = client.textRenderer ?: return
+        // Инициализируем систему GUI
+        GuiRenderer.initialize()
         
-        val fps = client.currentFps
+        // Создаём и регистрируем HUD элементы
+        HUDManager.register(HUDManager.createFpsCounter())
+        HUDManager.register(HUDManager.createCoordinates())
         
-        // Рисуем с черной подложкой (лучше видно на любом фоне)
-        val fpsText = "$fps FPS"
-        
-        // Черная подложка для читаемости
-        context.fill(2, 2, 80, 18, 0x80000000)
-        
-        // Белый текст
-        context.drawText(
-            textRenderer,
-            fpsText,
-            5,
-            5,
-            0xFFFFFF,
-            false
+        // Добавляем демо-панель
+        val demoPanel = RectElement(
+            x = 5f, y = 45f,
+            width = 120f, height = 80f,
+            fillColor = 0xCC000000,
+            outlineColor = 0xFF00FF00,
+            roundedRadius = 8f,
+            zIndex = 50
         )
+        HUDManager.register(demoPanel)
+        
+        // Регистрируем основной рендерер
+        HudRenderCallback.EVENT.register { context, tickCounter ->
+            // Перестраиваем HUD если нужно
+            HUDManager.rearrange()
+            
+            // Отрисовываем все элементы
+            GuiRenderer.render(context, tickCounter)
+        }
+        
+        logger.info("GUI система готова!")
     }
 }
