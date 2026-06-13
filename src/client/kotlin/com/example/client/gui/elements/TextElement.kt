@@ -24,8 +24,8 @@ class TextElement(
         if (!visible) return
         
         val textToDraw = text
-        val width = textRenderer.getWidth(textToDraw)
-        val height = textRenderer.fontHeight
+        val textWidth = textRenderer.getWidth(textToDraw)
+        val textHeight = textRenderer.fontHeight
         
         // Сохраняем матрицу для масштабирования
         val matrices = context.matrices
@@ -47,7 +47,7 @@ class TextElement(
         matrices.pop()
         
         // Обновляем размеры элемента для корректной обработки кликов
-        this.width = width * scale
-        this.height = height * scale
+        this.width = textWidth * scale
+        this.height = textHeight * scale
     }
 }
