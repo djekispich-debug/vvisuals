@@ -1,4 +1,3 @@
-
 package com.example.client.gui.elements
 
 import com.example.client.gui.GuiElement
@@ -6,35 +5,28 @@ import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.render.RenderTickCounter
 import kotlin.math.*
 
-/**
- * Элемент для отрисовки кругов, секторов и дуг
- * Поддерживает градиенты, обводку и частичную заливку
- */
 class CircleElement(
     centerX: Float = 0f,
     centerY: Float = 0f,
     var radius: Float = 20f,
-    var fillColor: Int = 0xFFFFFFFF,
+    var fillColor: Int = 0xFFFFFFFF.toInt(),
     var outlineColor: Int? = null,
     var outlineWidth: Float = 2f,
-    var startAngle: Float = 0f,      // Начальный угол в градусах (0 = вверх)
-    var sweepAngle: Float = 360f,     // Сколько градусов заливать (360 = полный круг)
-    var gradientStart: Int? = null,   // Цвет градиента (если не null)
-    var gradientEnd: Int? = null,     // Конечный цвет градиента
-    var segments: Int = 32,           // Количество сегментов (чем больше, тем плавнее)
+    var startAngle: Float = 0f,
+    var sweepAngle: Float = 360f,
+    var gradientStart: Int? = null,
+    var gradientEnd: Int? = null,
+    var segments: Int = 32,
     zIndex: Int = 0
 ) : GuiElement(centerX - radius, centerY - radius, radius * 2, radius * 2, zIndex = zIndex) {
     
-    // Обновляем bounds при изменении радиуса или позиции
-    private fun updateBounds() {
-        this.x = centerX - radius
-        this.y = centerY - radius
-        this.width = radius * 2
-        this.height = radius * 2
-    }
-    
     init {
         updateBounds()
+    }
+    
+    private fun updateBounds() {
+        // x и y - это верхний левый угол bounding box
+        // centerX и centerY переданы в конструктор
     }
     
     override fun render(context: DrawContext, tickCounter: RenderTickCounter) {
@@ -56,9 +48,6 @@ class CircleElement(
         }
     }
     
-    /**
-     * Рисует сектор круга
-     */
     private fun drawSector(
         context: DrawContext,
         cx: Float, cy: Float,
@@ -73,16 +62,10 @@ class CircleElement(
         
         val startRad = Math.toRadians(start.toDouble())
         val sweepRad = Math.toRadians(sweep.toDouble())
-        
-        // Используем треугольники для построения сектора
         val step = (sweepRad / segments).toFloat()
         
         var angle = startRad.toFloat()
         val endAngle = startRad.toFloat() + sweepRad.toFloat()
-        
-        // Первая вершина - центр
-        val centerX = cx
-        val centerY = cy
         
         // Рисуем треугольники от центра к окружности
         while (angle < endAngle) {
@@ -102,16 +85,13 @@ class CircleElement(
                 else -> color
             }
             
-            // Рисуем треугольник через заливку (используем много маленьких линий)
-            drawFilledTriangle(context, centerX.toInt(), centerY.toInt(), x1.toInt(), y1.toInt(), x2.toInt(), y2.toInt(), finalColor)
+            // Рисуем залитый треугольник
+            drawFilledTriangle(context, cx.toInt(), cy.toInt(), x1.toInt(), y1.toInt(), x2.toInt(), y2.toInt(), finalColor)
             
             angle += step
         }
     }
     
-    /**
-     * Рисует обводку сектора
-     */
     private fun drawSectorOutline(
         context: DrawContext,
         cx: Float, cy: Float,
@@ -139,7 +119,6 @@ class CircleElement(
             val x = cx + radius * cos(angle.toDouble()).toFloat()
             val y = cy + radius * sin(angle.toDouble()).toFloat()
             
-            // Рисуем линию между точками
             drawThickLine(context, lastX, lastY, x, y, width, color)
             
             lastX = x
@@ -147,7 +126,7 @@ class CircleElement(
             angle += step
         }
         
-        // Замыкаем сектор линиями к центру если нужно
+        // Замыкаем сектор линиями к центру
         if (sweep < 360f) {
             val startX = cx + radius * cos(startRad).toFloat()
             val startY = cy + radius * sin(startRad).toFloat()
@@ -159,21 +138,15 @@ class CircleElement(
         }
     }
     
-    /**
-     * Рисует залитый треугольник (упрощённая версия через линии)
-     */
     private fun drawFilledTriangle(context: DrawContext, x1: Int, y1: Int, x2: Int, y2: Int, x3: Int, y3: Int, color: Int) {
-        // Находим границы треугольника
         val minX = minOf(x1, x2, x3)
         val maxX = maxOf(x1, x2, x3)
         val minY = minOf(y1, y2, y3)
         val maxY = maxOf(y1, y2, y3)
         
-        // Простая заливка через горизонтальные линии (барицентрическая)
         for (y in minY..maxY) {
-            var intersections = mutableListOf<Int>()
+            val intersections = mutableListOf<Int>()
             
-            // Проверяем пересечения с каждой стороной
             checkLineIntersection(x1, y1, x2, y2, y, intersections)
             checkLineIntersection(x2, y2, x3, y3, y, intersections)
             checkLineIntersection(x3, y3, x1, y1, y, intersections)
@@ -195,46 +168,57 @@ class CircleElement(
         }
     }
     
-    /**
-     * Рисует линию с толщиной
-     */
     private fun drawThickLine(context: DrawContext, x1: Float, y1: Float, x2: Float, y2: Float, thickness: Float, color: Int) {
-        val angle = atan2((y2 - y1).toDouble(), (x2 - x1).toDouble())
-        val dx = (sin(angle) * thickness / 2).toFloat()
-        val dy = (-cos(angle) * thickness / 2).toFloat()
+        // Простая линия через заливку прямоугольника
+        val dx = x2 - x1
+        val dy = y2 - y1
+        val length = sqrt(dx * dx + dy * dy)
         
-        val x1i = x1.toInt()
-        val y1i = y1.toInt()
-        val x2i = x2.toInt()
-        val y2i = y2.toInt()
+        if (length == 0f) return
         
-        // Рисуем как четырёхугольник
-        context.fill(x1i, y1i, x2i, y2i, color)
+        val perpX = -dy / length * thickness / 2
+        val perpY = dx / length * thickness / 2
         
-        // Дорисовываем кружки на концах для плавности
-        val radius = (thickness / 2).toInt()
-        drawFilledCircle(context, (x1i - radius).toFloat(), (y1i - radius).toFloat(), radius.toFloat(), color)
-        drawFilledCircle(context, (x2i - radius).toFloat(), (y2i - radius).toFloat(), radius.toFloat(), color)
-    }
-    
-    /**
-     * Рисует залитый круг (упрощённо)
-     */
-    private fun drawFilledCircle(context: DrawContext, cx: Float, cy: Float, r: Float, color: Int) {
-        val ix = cx.toInt()
-        val iy = cy.toInt()
-        val ir = r.toInt()
+        val points = listOf(
+            x1 + perpX to y1 + perpY,
+            x1 - perpX to y1 - perpY,
+            x2 - perpX to y2 - perpY,
+            x2 + perpX to y2 + perpY
+        )
         
-        for (y in -ir..ir) {
-            val dy = y.toFloat()
-            val dx = sqrt(r * r - dy * dy).toInt()
-            context.fill(ix - dx, iy + y, ix + dx, iy + y + 1, color)
+        val minX = points.minOf { it.first.toInt() }
+        val maxX = points.maxOf { it.first.toInt() }
+        val minY = points.minOf { it.second.toInt() }
+        val maxY = points.maxOf { it.second.toInt() }
+        
+        for (y in minY..maxY) {
+            for (x in minX..maxX) {
+                if (isPointInPolygon(x.toFloat(), y.toFloat(), points)) {
+                    context.fill(x, y, x + 1, y + 1, color)
+                }
+            }
         }
     }
     
-    /**
-     * Интерполяция цветов для градиента
-     */
+    private fun isPointInPolygon(x: Float, y: Float, polygon: List<Pair<Float, Float>>): Boolean {
+        var inside = false
+        var j = polygon.size - 1
+        
+        for (i in polygon.indices) {
+            val xi = polygon[i].first
+            val yi = polygon[i].second
+            val xj = polygon[j].first
+            val yj = polygon[j].second
+            
+            if ((yi > y) != (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) {
+                inside = !inside
+            }
+            j = i
+        }
+        
+        return inside
+    }
+    
     private fun interpolateColor(start: Int, end: Int, progress: Float): Int {
         val startA = (start shr 24) and 0xFF
         val startR = (start shr 16) and 0xFF
@@ -254,19 +238,14 @@ class CircleElement(
         return (a shl 24) or (r shl 16) or (g shl 8) or b
     }
     
-    /**
-     * Обновляет позицию центра
-     */
     fun setCenter(x: Float, y: Float) {
         this.x = x - radius
         this.y = y - radius
     }
     
-    /**
-     * Обновляет радиус
-     */
     fun setRadius(newRadius: Float) {
         this.radius = newRadius
-        updateBounds()
+        this.width = radius * 2
+        this.height = radius * 2
     }
 }
